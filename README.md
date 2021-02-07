@@ -53,3 +53,6 @@ This repository contains the data and code that was used in our paper published 
   
 # Things to investigate
 1. companies have missing years - how does the original paper handle this issue
+
+# Work
+- Week Feb 14: Solve that missing year thing and use Baseline RNN to get embeddings for clustering
