@@ -57,11 +57,9 @@
                               mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)))
  
         #check how often fraud companies have missing values
+      
         
-        
-        
-        
-    
+      
     #some visualizaiton 
         library(ggplot2)
     
@@ -73,6 +71,7 @@
                                            size=8, angle=0),
                 axis.text.y = element_text(face="bold", color="#008000",
                                            size=8, angle=0))
+        
     #split into training and test sets
         train_data <- dataset$train$x 
         train_targets <- dataset$train$y 
@@ -97,127 +96,126 @@
     #we want to generate fraud cases
       # some features we might be interested in: peer-group performance, short-term liability, typical accounting fraud variables
 
-    library(keras)
-    library(tensorflow)
-    use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
-    reticulate::py_config()
-    
-    K.clear_session()
-    tf.compat.v1.reset_default_graph()
-    K <- backend()
-    img_shape <- c(28, 28, 1)
-    batch_size <- 16
-    latent_dim <- 2L
-    input_img <- layer_input(shape = img_shape)
-    x <- input_img %>%
-      layer_conv_2d(filters = 32, kernel_size = 3, padding = "same",
-                    activation = "relu") %>%
-      layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
-                    activation = "relu", strides = c(2, 2)) %>%
-      layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
-                    activation = "relu") %>%
-      layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
-                    activation = "relu")
-    shape_before_flattening <- K$int_shape(x)
-    x <- x %>%
-      layer_flatten() %>%
-      layer_dense(units = 32, activation = "relu")
-    z_mean <- x %>%
-      layer_dense(units = latent_dim)
-    z_log_var <- x %>%
-      layer_dense(units = latent_dim)
-    #latent space sampling function 
-    sampling <- function(args) {
-      c(z_mean, z_log_var) %<-% args
-      epsilon <- K$random_normal(shape = list(K$shape(z_mean)[1], latent_dim),
-                                 mean = 0, stddev = 1)
-      z_mean + K$exp(z_log_var) * epsilon
-    }
-    z <- list(z_mean, z_log_var) %>%
-      layer_lambda(sampling)
-    
-    # VAE decoder network, mapping latent space points to images
-    decoder_input <- layer_input(K$int_shape(z)[-1])
-    x <- decoder_input %>%
-      layer_dense(units = prod(as.integer(shape_before_flattening[-1])),
-                  activation = "relu") %>%
-      layer_reshape(target_shape = shape_before_flattening[-1]) %>%
-      layer_conv_2d_transpose(filters = 32, kernel_size = 3, padding = "same",
-                              activation = "relu", strides = c(2, 2)) %>%
-      layer_conv_2d(filters = 1, kernel_size = 3, padding = "same",
-                    activation = "sigmoid")
-    decoder <- keras_model(decoder_input, x)
-    z_decoded <- decoder(z)
-    
-    #custome layer to compute VAE
-    library(R6)
-    CustomVariationalLayer <- R6Class("CustomVariationalLayer",
-                                      inherit = KerasLayer,
-                                      public = list(
-                                        vae_loss = function(x, z_decoded) {
-                                          x <- K$flatten(x)
-                                          z_decoded <- K$flatten(z_decoded)
-                                          xent_loss <- metric_binary_crossentropy(x, z_decoded)
-                                          kl_loss <- -5e-4 * K$mean(
-                                            1 + z_log_var - K$square(z_mean) - K$exp(z_log_var),
-                                            axis = -1L
+        library(keras)
+        library(tensorflow)
+        use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+        reticulate::py_config()
+        
+        K.clear_session()
+        tf.compat.v1.reset_default_graph()
+        K <- backend()
+        img_shape <- c(28, 28, 1)
+        batch_size <- 16
+        latent_dim <- 2L
+        input_img <- layer_input(shape = img_shape)
+        x <- input_img %>%
+          layer_conv_2d(filters = 32, kernel_size = 3, padding = "same",
+                        activation = "relu") %>%
+          layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
+                        activation = "relu", strides = c(2, 2)) %>%
+          layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
+                        activation = "relu") %>%
+          layer_conv_2d(filters = 64, kernel_size = 3, padding = "same",
+                        activation = "relu")
+        shape_before_flattening <- K$int_shape(x)
+        x <- x %>%
+          layer_flatten() %>%
+          layer_dense(units = 32, activation = "relu")
+        z_mean <- x %>%
+          layer_dense(units = latent_dim)
+        z_log_var <- x %>%
+          layer_dense(units = latent_dim)
+        #latent space sampling function 
+        sampling <- function(args) {
+          c(z_mean, z_log_var) %<-% args
+          epsilon <- K$random_normal(shape = list(K$shape(z_mean)[1], latent_dim),
+                                     mean = 0, stddev = 1)
+          z_mean + K$exp(z_log_var) * epsilon
+        }
+        z <- list(z_mean, z_log_var) %>%
+          layer_lambda(sampling)
+        
+        # VAE decoder network, mapping latent space points to images
+        decoder_input <- layer_input(K$int_shape(z)[-1])
+        x <- decoder_input %>%
+          layer_dense(units = prod(as.integer(shape_before_flattening[-1])),
+                      activation = "relu") %>%
+          layer_reshape(target_shape = shape_before_flattening[-1]) %>%
+          layer_conv_2d_transpose(filters = 32, kernel_size = 3, padding = "same",
+                                  activation = "relu", strides = c(2, 2)) %>%
+          layer_conv_2d(filters = 1, kernel_size = 3, padding = "same",
+                        activation = "sigmoid")
+        decoder <- keras_model(decoder_input, x)
+        z_decoded <- decoder(z)
+        
+        #custome layer to compute VAE
+        library(R6)
+        CustomVariationalLayer <- R6Class("CustomVariationalLayer",
+                                          inherit = KerasLayer,
+                                          public = list(
+                                            vae_loss = function(x, z_decoded) {
+                                              x <- K$flatten(x)
+                                              z_decoded <- K$flatten(z_decoded)
+                                              xent_loss <- metric_binary_crossentropy(x, z_decoded)
+                                              kl_loss <- -5e-4 * K$mean(
+                                                1 + z_log_var - K$square(z_mean) - K$exp(z_log_var),
+                                                axis = -1L
+                                              )
+                                              K$mean(xent_loss + kl_loss)
+                                            },
+                                            call = function(inputs, mask = NULL) {
+                                              x <- inputs[[1]]
+                                              z_decoded <- inputs[[2]]
+                                              loss <- self$vae_loss(x, z_decoded)
+                                              self$add_loss(loss, inputs = inputs)
+                                              x
+                                            }
                                           )
-                                          K$mean(xent_loss + kl_loss)
-                                        },
-                                        call = function(inputs, mask = NULL) {
-                                          x <- inputs[[1]]
-                                          z_decoded <- inputs[[2]]
-                                          loss <- self$vae_loss(x, z_decoded)
-                                          self$add_loss(loss, inputs = inputs)
-                                          x
-                                        }
-                                      )
-    )
-    layer_variational <- function(object) {
-      create_layer(CustomVariationalLayer, object, list())
-    }
-    y <- list(input_img, z_decoded) %>%
-      layer_variational()
-    #training VAE
-    vae <- keras_model(input_img, y)
-    vae %>% compile(
-      optimizer = "rmsprop",
-      loss = NULL,experimental_run_tf_function=FALSE
-    )
-    mnist <- dataset_mnist()
-    c(c(x_train, y_train), c(x_test, y_test)) %<-% mnist
-    x_train <- x_train / 255
-    x_train <- array_reshape(x_train, dim =c(dim(x_train), 1))
-    x_test <- x_test / 255
-    x_test <- array_reshape(x_test, dim =c(dim(x_test), 1))
+        )
+        layer_variational <- function(object) {
+          create_layer(CustomVariationalLayer, object, list())
+        }
+        y <- list(input_img, z_decoded) %>%
+          layer_variational()
+        #training VAE
+        vae <- keras_model(input_img, y)
+        vae %>% compile(
+          optimizer = "rmsprop",
+          loss = NULL,experimental_run_tf_function=FALSE
+        )
+        mnist <- dataset_mnist()
+        c(c(x_train, y_train), c(x_test, y_test)) %<-% mnist
+        x_train <- x_train / 255
+        x_train <- array_reshape(x_train, dim =c(dim(x_train), 1))
+        x_test <- x_test / 255
+        x_test <- array_reshape(x_test, dim =c(dim(x_test), 1))
+        
+        
+        vae %>% fit(
+          x = x_train, y = NULL,
+          epochs = 10,
+          batch_size = batch_size,
+          validation_data = list(x_test, NULL)
+        ) #https://github.com/rstudio/keras/issues/1008
+        
+        #Sampling a grid of points from the 2D latent space and decoding them to images
+        n <- 15
+        digit_size <- 28
+        grid_x <- qnorm(seq(0.05, 0.95, length.out = n))
+        grid_y <- qnorm(seq(0.05, 0.95, length.out = n))
+        op <- par(mfrow = c(n, n), mar = c(0,0,0,0), bg = "black")
+        for (i in 1:length(grid_x)) {
+          yi <- grid_x[[i]]
+          for (j in 1:length(grid_y)) {
+                xi <- grid_y[[j]]
+                z_sample <- matrix(c(xi, yi), nrow = 1, ncol = 2)
+                z_sample <- t(replicate(batch_size, z_sample, simplify = "matrix"))
+                x_decoded <- decoder %>% predict(z_sample, batch_size = batch_size)
+                digit <- array_reshape(x_decoded[1,,,], dim = c(digit_size, digit_size))
+                plot(as.raster(digit))
+          }
+        }
+        par(op)
     
-    
-    vae %>% fit(
-      x = x_train, y = NULL,
-      epochs = 10,
-      batch_size = batch_size,
-      validation_data = list(x_test, NULL)
-    ) #https://github.com/rstudio/keras/issues/1008
-    
-    #Sampling a grid of points from the 2D latent space and decoding them to images
-    n <- 15
-    digit_size <- 28
-    grid_x <- qnorm(seq(0.05, 0.95, length.out = n))
-    grid_y <- qnorm(seq(0.05, 0.95, length.out = n))
-    op <- par(mfrow = c(n, n), mar = c(0,0,0,0), bg = "black")
-    for (i in 1:length(grid_x)) {
-      yi <- grid_x[[i]]
-      for (j in 1:length(grid_y)) {
-            xi <- grid_y[[j]]
-            z_sample <- matrix(c(xi, yi), nrow = 1, ncol = 2)
-            z_sample <- t(replicate(batch_size, z_sample, simplify = "matrix"))
-            x_decoded <- decoder %>% predict(z_sample, batch_size = batch_size)
-            digit <- array_reshape(x_decoded[1,,,], dim = c(digit_size, digit_size))
-            plot(as.raster(digit))
-      }
-    }
-    par(op)
-    
-    
-    
-   #
+  
+   # rnn missing values

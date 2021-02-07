@@ -53,7 +53,6 @@ colnames(dataset)
 ```
 
 ## Produce some basic summaries
-# some data summary
 ```{r basic summaries, echo=FALSE}
     #some numbers about frauds
         all_companies <- unique(dataset$gvkey)
@@ -89,4 +88,5 @@ colnames(dataset)
         missing_vale_df <- missing_value_count %>% 
                               arrange(missing_value_count) %>%
                               mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)))
+        missing_vale_df
 ```

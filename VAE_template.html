@@ -493,8 +493,8 @@ summary {
 ##  $ Legacy.CST.Item.Name  : chr  &quot;iaitems&quot; &quot;iaitems&quot; &quot;iaitems&quot; &quot;iaitems&quot; ...
 ##  $ Description           : chr  &quot;Cash and Short-Term Investments&quot; &quot;Receivables/Total&quot; &quot;Inventories - Total&quot; &quot;Current Assets - Total&quot; ...</code></pre>
 </div>
-<div id="rename-some-column-of-dataset" class="section level2">
-<h2>Rename some column of “dataset”</h2>
+<div id="rename-some-datasets-columns" class="section level2">
+<h2>Rename some dataset’s columns</h2>
 <pre><code>##  [1] &quot;fyear&quot;                                            
 ##  [2] &quot;gvkey&quot;                                            
 ##  [3] &quot;Standard Industrial Classification - Historical&quot;  
@@ -546,6 +546,64 @@ summary {
 ## [49] &quot;reoa&quot;                                             
 ## [50] &quot;EBIT&quot;                                             
 ## [51] &quot;ch_fcf&quot;</code></pre>
+</div>
+<div id="produce-some-basic-summaries" class="section level2">
+<h2>Produce some basic summaries</h2>
+<pre><code>## total number of companies:  18444</code></pre>
+<pre><code>## 
+## number of fraud companies:  16</code></pre>
+<pre><code>## 
+## fraud companies:  5250 23288 8496 1278 13839 63859 3650 29001 30870 63951 10310 6497 141642 11982 62399 175982</code></pre>
+<pre><code>## 
+## Proportion of non-fraud vs. fraud annual statements</code></pre>
+<pre><code>## 
+##            0            1 
+## 0.9998219727 0.0001780273</code></pre>
+<pre><code>## Proportion of fraud companies:  0.0008674908</code></pre>
+<pre><code>## 
+## Total number of annual statements:  146045</code></pre>
+<pre><code>## 
+## Total number of fraud statements:  26</code></pre>
+<pre><code>## 
+## 
+## Contigency Table for statements labelled &#39;Issues&#39;</code></pre>
+<pre><code>## 
+##    0    1 
+## 0.14 0.86</code></pre>
+<pre><code>##                                        missing_var missing_value_count
+## 1                                               bm                  18
+## 2                                             reoa                 591
+## 3                                             EBIT                 591
+## 4                                      soft_assets                 592
+## 5                                          dch_inv                4615
+## 6                                          dch_rec                4743
+## 7                                           dch_wc                4759
+## 8                                          ch_rsst                4851
+## 9                                           ch_fcf                5407
+## 10                                             dpi                9228
+## 11                                          ch_roa               12678
+## 12 Standard Industrial Classification - Historical               13529
+## 13                                           ch_cs               15918
+## 14                                           ch_cm               17107
+## 15                                          p_aaer              145081
+## 16                                      new_p_aaer              145081
+##    missing_value_perc
+## 1            0.01232%
+## 2            0.40467%
+## 3            0.40467%
+## 4            0.40535%
+## 5            3.15998%
+## 6            3.24763%
+## 7            3.25858%
+## 8            3.32158%
+## 9            3.70228%
+## 10           6.31860%
+## 11           8.68089%
+## 12           9.26358%
+## 13          10.89938%
+## 14          11.71351%
+## 15          99.33993%
+## 16          99.33993%</code></pre>
 </div>
 
 
