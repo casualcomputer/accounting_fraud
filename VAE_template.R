@@ -63,27 +63,27 @@
         
     
     #some visualizaiton 
-    library(ggplot2)
-
-    ggplot(y, aes(x = start_station_name, y = duration, main="Car Distribution"),data=dataset) +
-      geom_bar(stat = "identity") +
-      coord_flip() + scale_y_continuous(name="Average Trip Duration (in seconds)") +
-      scale_x_discrete(name="Start Station") +
-      theme(axis.text.x = element_text(face="bold", color="#008000",
-                                       size=8, angle=0),
-            axis.text.y = element_text(face="bold", color="#008000",
-                                       size=8, angle=0))
-      
-    train_data <- dataset$train$x 
-    train_targets <- dataset$train$y 
-    test_data <- dataset$test$x 
-    test_targets <- dataset$test$y
+        library(ggplot2)
     
-    mean <- apply(train_data,2,mean)
-    std <- apply(train_data,2, sd)    
-    
-    train_data <- scale(train_data, center=mean,scale=std)
-    test_data <- scale(test_data, center=mean,scale=std) 
+        ggplot(y, aes(x = start_station_name, y = duration, main="Car Distribution"),data=dataset) +
+          geom_bar(stat = "identity") +
+          coord_flip() + scale_y_continuous(name="Average Trip Duration (in seconds)") +
+          scale_x_discrete(name="Start Station") +
+          theme(axis.text.x = element_text(face="bold", color="#008000",
+                                           size=8, angle=0),
+                axis.text.y = element_text(face="bold", color="#008000",
+                                           size=8, angle=0))
+    #split into training and test sets
+        train_data <- dataset$train$x 
+        train_targets <- dataset$train$y 
+        test_data <- dataset$test$x 
+        test_targets <- dataset$test$y
+        
+        mean <- apply(train_data,2,mean)
+        std <- apply(train_data,2, sd)    
+        
+        train_data <- scale(train_data, center=mean,scale=std)
+        test_data <- scale(test_data, center=mean,scale=std) 
     
 # where is the data dicitonary...
 # does the performance metrics make sense.. 

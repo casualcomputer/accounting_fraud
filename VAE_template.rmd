@@ -1,0 +1,92 @@
+---
+title: "VAE_template"
+author: "casualcomputer"
+date: "07/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r cars}
+    library(dplyr)
+    library(stringr)
+    library(scales)
+```
+
+## Load data
+
+```{r load_data, echo=FALSE}
+# load accounting fraud data     
+    dataset <- read.csv("uscecchini28.csv")
+    data_dictionary <- read.csv("get_Data_dict.csv") #data dictionary: http://www.crsp.org/products/documentation/annual-data-industrial
+    str(dataset)
+    str(data_dictionary)
+```
+
+
+## Rename some dataset's columns 
+```{r rename_colnames, echo=FALSE}
+#  change column names of "dataset", to reflect names of accounting variables
+        colNames_dataset <- toupper(names(dataset))
+        var_in_dict <-    data.frame("var"=toupper(colNames_dataset)) %>% 
+                          left_join(data_dictionary, by=c("var"="New.CCM.Item.Name")) %>% 
+                          filter(!is.na(Description)) %>% 
+                          select(var,Description)  
+        
+        var_position <- c()
+        for (i in var_in_dict$var){
+          var_position <- c(var_position,which(colNames_dataset==i))
+        }
+        var_in_dict$position <- var_position
+    
+        
+        for (i in 1:dim(var_in_dict)[1]){
+          names(dataset)[var_in_dict[i,3]] <- var_in_dict[i,2]
+        }
+        names(dataset) <- gsub("\\\\","",names(dataset))
+colnames(dataset)
+```
+
+## Produce some basic summaries
+# some data summary
+```{r basic summaries, echo=FALSE}
+    #some numbers about frauds
+        all_companies <- unique(dataset$gvkey)
+        fraud_companies <- unique((dataset[dataset$understatement==1,]$gvkey))
+        cat("total number of companies: ", length(all_companies))
+        cat("\nnumber of fraud companies: ", length(fraud_companies))
+        cat("\nfraud companies: ", fraud_companies)
+        cat("\n\n")
+        
+        
+        cat("\nProportion of non-fraud vs. fraud annual statements")
+        prop.table(table(dataset$understatement)) #fraud reporting (understatement=1) /all reporting
+        cat("\n\n")
+        
+        
+        fraud_perc <- length(fraud_companies)/length(unique(dataset$gvkey)) #num. fraud companies/ all companies
+        cat("Proportion of fraud companies: ", fraud_perc)
+        cat("\n\n")
+        
+        cat("\nTotal number of annual statements: ", nrow(dataset))
+        cat("\nTotal number of fraud statements: ", nrow(dataset[dataset$understatement==1,]))
+        cat("\n")
+        
+        cat("\n\nContigency Table for statements labelled 'Issues'")
+        round(prop.table(table(dataset$issue)),2) #what is this? what "issue" are we talking about?
+    
+    #check missing values
+        missing_value_count <- data.frame(missing_value_count= apply(dataset, 2, function(x){sum(is.na(x))})) %>% 
+                                filter(missing_value_count>=1)
+        missing_value_count$missing_var <- row.names(missing_value_count)
+        row.names(missing_value_count) <- NULL
+        missing_value_count <- missing_value_count[,c(2,1)]
+        missing_vale_df <- missing_value_count %>% 
+                              arrange(missing_value_count) %>%
+                              mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)))
+```
