@@ -1,44 +1,71 @@
-# get data dictionary 
+#library(usethis)
+#edit_r_environ()
+# use_github(protocol = "https",
+#            auth_token = Sys.getenv("GITHUB_PAT"))
 
 
-# load accounting fraud data  
+
     library(dplyr)
     library(stringr)
-    dataset <- read.csv("uscecchini28.csv") #data dictionary: http://www.crsp.org/products/documentation/annual-data-industrial
+    library(scales)
+    
+# load accounting fraud data     
+    dataset <- read.csv("uscecchini28.csv")
+    data_dictionary <- read.csv("get_Data_dict.csv") #data dictionary: http://www.crsp.org/products/documentation/annual-data-industrial
+    
+
+#  change column names of "dataset", to reflect names of accounting variables
+        colNames_dataset <- toupper(names(dataset))
+        var_in_dict <-    data.frame("var"=toupper(colNames_dataset)) %>% 
+                          left_join(data_dictionary, by=c("var"="New.CCM.Item.Name")) %>% 
+                          filter(!is.na(Description)) %>% 
+                          select(var,Description)  
+        
+        var_position <- c()
+        for (i in var_in_dict$var){
+          var_position <- c(var_position,which(colNames_dataset==i))
+        }
+        var_in_dict$position <- var_position
+    
+        
+        for (i in 1:dim(var_in_dict)[1]){
+          names(dataset)[var_in_dict[i,3]] <- var_in_dict[i,2]
+        }
+        names(dataset) <- gsub("\\\\","",names(dataset))
+
+        
+# some data summary
+    
     str(dataset) #why is this dataset ignoring so many other variables? any justificaitons?
     dim(dataset)
     
-    colNames_dataset <- toupper(names(dataset))
-    data_dictionary <- read.csv("get_Data_dict.csv")
-    var_in_dict <-    data.frame("var"=toupper(colNames_dataset)) %>% 
-                      left_join(data_dictionary, by=c("var"="New.CCM.Item.Name")) %>% 
-                      filter(!is.na(Description)) %>% 
-                      select(var,Description) 
-    var_position <- c()
-    for (i in var_in_dict$var){
-      var_position <- c(var_position,which(colNames_dataset==i))
-    }
-    var_in_dict$position <- var_position
-    c(row_num, col_num) %<-% dim(var_in_dict)
+    #some numbers about frauds
+        fraud_companies <- unique((dataset[dataset$understatement==1,]$gvkey))
+        cat("num of fraud companies: ", length(fraud_companies))
+        prop.table(table(dataset$understatement)) #fraud reporting (understatement=1) /all reporting
+        length(fraud_companies)/length(unique(dataset$gvkey)) #num. fraud companies/ all companies
+        round(prop.table(table(dataset$issue)),2) #what is this? what "issue" are we talking about?
     
-    for (i in 1:row_num){
-      names(dataset)[var_in_dict[i,3]] <- var_in_dict[i,2]
-    }
-    names(dataset) <- gsub("\\\\","",names(dataset))
-    
-    #some percentages 
-    prop.table(table(dataset$understatement))
-    round(prop.table(table(dataset$issue)),2) #what is this?
-    
-    missing_value_count <- apply(dataset, 2, function(x){sum(is.na(x))})
-    missing_vale_df <- as.data.frame(missing_value_count) %>% 
-                          filter(missing_value_count>=1) %>% 
-                          arrange(missing_value_count) 
+    #check missing values
+        missing_value_count <- data.frame(missing_value_count= apply(dataset, 2, function(x){sum(is.na(x))})) %>% 
+                                filter(missing_value_count>=1)
+        missing_value_count$missing_var <- row.names(missing_value_count)
+        row.names(missing_value_count) <- NULL
+        missing_value_count <- missing_value_count[,c(2,1)]
+        missing_vale_df <- missing_value_count %>% 
+                              arrange(missing_value_count) %>%
+                              mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)))
+ 
+        #check how often fraud companies have missing values
+        
+        
+        
+        
     
     #some visualizaiton 
     library(ggplot2)
 
-    ggplot(y, aes(x = start_station_name, y = duration, main="Car Distribution"),data=) +
+    ggplot(y, aes(x = start_station_name, y = duration, main="Car Distribution"),data=dataset) +
       geom_bar(stat = "identity") +
       coord_flip() + scale_y_continuous(name="Average Trip Duration (in seconds)") +
       scale_x_discrete(name="Start Station") +
