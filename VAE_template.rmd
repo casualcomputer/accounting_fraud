@@ -2,17 +2,19 @@
 title: "VAE_template"
 author: "casualcomputer"
 date: "07/02/2021"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## R Markdown
 
 
-```{r cars}
+```{r packages,warning=FALSE}
     library(dplyr)
     library(stringr)
     library(scales)
@@ -20,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Load data
 
-```{r load_data, echo=FALSE}
+```{r load_data, echo=TRUE}
 # load accounting fraud data     
     dataset <- read.csv("uscecchini28.csv")
     data_dictionary <- read.csv("get_Data_dict.csv") #data dictionary: http://www.crsp.org/products/documentation/annual-data-industrial
@@ -30,7 +32,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Rename some dataset's columns 
-```{r rename_colnames, echo=FALSE}
+```{r rename_colnames, echo=TRUE}
 #  change column names of "dataset", to reflect names of accounting variables
         colNames_dataset <- toupper(names(dataset))
         var_in_dict <-    data.frame("var"=toupper(colNames_dataset)) %>% 
@@ -53,7 +55,7 @@ colnames(dataset)
 ```
 
 ## Produce some basic summaries
-```{r basic summaries, echo=FALSE}
+```{r basic summaries, echo=TRUE}
     #some numbers about frauds
         all_companies <- unique(dataset$gvkey)
         fraud_companies <- unique((dataset[dataset$understatement==1,]$gvkey))
@@ -72,21 +74,81 @@ colnames(dataset)
         cat("Proportion of fraud companies: ", fraud_perc)
         cat("\n\n")
         
-        cat("\nTotal number of annual statements: ", nrow(dataset))
+        cat("\nTotal number of annual statements: ", comma(nrow(dataset)))
         cat("\nTotal number of fraud statements: ", nrow(dataset[dataset$understatement==1,]))
         cat("\n")
         
         cat("\n\nContigency Table for statements labelled 'Issues'")
         round(prop.table(table(dataset$issue)),2) #what is this? what "issue" are we talking about?
     
-    #check missing values
+    #check variables with missing values
         missing_value_count <- data.frame(missing_value_count= apply(dataset, 2, function(x){sum(is.na(x))})) %>% 
-                                filter(missing_value_count>=1)
+                                    filter(missing_value_count>=1)  
+          
         missing_value_count$missing_var <- row.names(missing_value_count)
         row.names(missing_value_count) <- NULL
         missing_value_count <- missing_value_count[,c(2,1)]
-        missing_vale_df <- missing_value_count %>% 
-                              arrange(missing_value_count) %>%
-                              mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)))
-        missing_vale_df
+        missing_value_df <-   missing_value_count %>% 
+                              arrange(missing_value_count) %>% #asc on number of missing values
+                              mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)),
+                                     missing_value_count =comma(missing_value_count))
+        missing_value_df.new <- missing_value_df %>% 
+                                left_join(data_dictionary, by=c("missing_var"= "Description")) %>% 
+                                select(c(4,1,2,3)) %>% 
+                                mutate(New.CCM.Item.Name=tolower(New.CCM.Item.Name)) %>% 
+                                rename(missing_var_orig_coding=New.CCM.Item.Name)
+        missing_value_df.new
+        cat("\n\n")
+    
+    #check if we are missing different years' data
+        companies_with_missing_year <- dataset %>% 
+                                       select(gvkey,fyear) %>% 
+                                       group_by(gvkey) %>%
+                                       mutate(report_range = max(fyear)-min(fyear)+1,
+                                              count_reports= n(),
+                                              num_missing_year =report_range - count_reports,
+                                              proportion_reports_missing =num_missing_year/report_range) %>% 
+                                       distinct(gvkey,report_range,count_reports,num_missing_year,proportion_reports_missing) %>% 
+                                       filter(num_missing_year>=1) %>% #get companies that have missed annual reports
+                                       distinct(gvkey)
+          
+        num_company_with_missing_reports <- length(companies_with_missing_year$gvkey)
+        cat("Number of companies with missing annual reports:", 
+            comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed
+        cat("\nTotal number of companies:", comma(length(all_companies)))       
+        cat("\nProportion of companies with missing annual reports:", percent(num_company_with_missing_reports/length(all_companies)))   
+```
+
+
+## Split to training and test set 
+```{r train_test, echo=TRUE}
+
+    dataset.new <- dataset
+    dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)#convert all int columns to categories
+    dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+    dataset.new$new_p_aaer <- NULL#"Accounting and Auditing Enforcement Releases" usually come after allegations
+    str(dataset.new)
+
+```
+
+## RNN 
+```{r RNN, echo=TRUE}
+    
+    # library(keras)
+    # library(tensorflow)
+    # use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+    # 
+    # max_features <- 10000
+    # maxlen <- 500
+    # batch_size <- 32
+    # cat("Loading data...\n")
+    # imdb <- dataset_imdb(num_words = max_features)
+    # c(c(input_train, y_train), c(input_test, y_test)) %<-% imdb
+    # cat(length(input_train), "train sequences\n")
+    # cat(length(input_test), "test sequences")
+    # cat("Pad sequences (samples x time)\n")
+    # input_train <- pad_sequences(input_train, maxlen = maxlen)
+    # input_test <- pad_sequences(input_test, maxlen = maxlen)
+    # cat("input_train shape:", dim(input_train), "\n")
+    # cat("input_test shape:", dim(input_test), "\n")
 ```

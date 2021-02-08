@@ -418,6 +418,7 @@ summary {
 </div>
 
 
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE)</code></pre>
 <div id="r-markdown" class="section level2">
 <h2>R Markdown</h2>
 <pre class="r"><code>    library(dplyr)</code></pre>
@@ -434,6 +435,10 @@ summary {
 </div>
 <div id="load-data" class="section level2">
 <h2>Load data</h2>
+<pre class="r"><code># load accounting fraud data     
+    dataset &lt;- read.csv(&quot;uscecchini28.csv&quot;)
+    data_dictionary &lt;- read.csv(&quot;get_Data_dict.csv&quot;) #data dictionary: http://www.crsp.org/products/documentation/annual-data-industrial
+    str(dataset)</code></pre>
 <pre><code>## &#39;data.frame&#39;:    146045 obs. of  51 variables:
 ##  $ fyear         : int  1990 1990 1990 1990 1990 1990 1990 1990 1990 1990 ...
 ##  $ gvkey         : int  1009 1011 1017 1021 1028 1034 1036 1043 1045 1050 ...
@@ -486,6 +491,7 @@ summary {
 ##  $ reoa          : num  0.1676 -0.429 0.3948 0.0948 -0.9424 ...
 ##  $ EBIT          : num  0.162 -0.1579 0.0637 0.0883 -0.7008 ...
 ##  $ ch_fcf        : num  -0.0421 0.1002 0.0663 -0.0174 0.1303 ...</code></pre>
+<pre class="r"><code>    str(data_dictionary)</code></pre>
 <pre><code>## &#39;data.frame&#39;:    395 obs. of  5 variables:
 ##  $ New.CCM.Item.Name     : chr  &quot;CHE&quot; &quot;RECT&quot; &quot;INVT&quot; &quot;ACT&quot; ...
 ##  $ Keyset                : int  1 1 1 1 1 1 1 1 1 1 ...
@@ -495,6 +501,25 @@ summary {
 </div>
 <div id="rename-some-datasets-columns" class="section level2">
 <h2>Rename some dataset’s columns</h2>
+<pre class="r"><code>#  change column names of &quot;dataset&quot;, to reflect names of accounting variables
+        colNames_dataset &lt;- toupper(names(dataset))
+        var_in_dict &lt;-    data.frame(&quot;var&quot;=toupper(colNames_dataset)) %&gt;% 
+                          left_join(data_dictionary, by=c(&quot;var&quot;=&quot;New.CCM.Item.Name&quot;)) %&gt;% 
+                          filter(!is.na(Description)) %&gt;% 
+                          select(var,Description)  
+        
+        var_position &lt;- c()
+        for (i in var_in_dict$var){
+          var_position &lt;- c(var_position,which(colNames_dataset==i))
+        }
+        var_in_dict$position &lt;- var_position
+    
+        
+        for (i in 1:dim(var_in_dict)[1]){
+          names(dataset)[var_in_dict[i,3]] &lt;- var_in_dict[i,2]
+        }
+        names(dataset) &lt;- gsub(&quot;\\\\&quot;,&quot;&quot;,names(dataset))
+colnames(dataset)</code></pre>
 <pre><code>##  [1] &quot;fyear&quot;                                            
 ##  [2] &quot;gvkey&quot;                                            
 ##  [3] &quot;Standard Industrial Classification - Historical&quot;  
@@ -549,61 +574,197 @@ summary {
 </div>
 <div id="produce-some-basic-summaries" class="section level2">
 <h2>Produce some basic summaries</h2>
+<pre class="r"><code>    #some numbers about frauds
+        all_companies &lt;- unique(dataset$gvkey)
+        fraud_companies &lt;- unique((dataset[dataset$understatement==1,]$gvkey))
+        cat(&quot;total number of companies: &quot;, length(all_companies))</code></pre>
 <pre><code>## total number of companies:  18444</code></pre>
+<pre class="r"><code>        cat(&quot;\nnumber of fraud companies: &quot;, length(fraud_companies))</code></pre>
 <pre><code>## 
 ## number of fraud companies:  16</code></pre>
+<pre class="r"><code>        cat(&quot;\nfraud companies: &quot;, fraud_companies)</code></pre>
 <pre><code>## 
 ## fraud companies:  5250 23288 8496 1278 13839 63859 3650 29001 30870 63951 10310 6497 141642 11982 62399 175982</code></pre>
+<pre class="r"><code>        cat(&quot;\n\n&quot;)</code></pre>
+<pre class="r"><code>        cat(&quot;\nProportion of non-fraud vs. fraud annual statements&quot;)</code></pre>
 <pre><code>## 
 ## Proportion of non-fraud vs. fraud annual statements</code></pre>
+<pre class="r"><code>        prop.table(table(dataset$understatement)) #fraud reporting (understatement=1) /all reporting</code></pre>
 <pre><code>## 
 ##            0            1 
 ## 0.9998219727 0.0001780273</code></pre>
+<pre class="r"><code>        cat(&quot;\n\n&quot;)</code></pre>
+<pre class="r"><code>        fraud_perc &lt;- length(fraud_companies)/length(unique(dataset$gvkey)) #num. fraud companies/ all companies
+        cat(&quot;Proportion of fraud companies: &quot;, fraud_perc)</code></pre>
 <pre><code>## Proportion of fraud companies:  0.0008674908</code></pre>
+<pre class="r"><code>        cat(&quot;\n\n&quot;)</code></pre>
+<pre class="r"><code>        cat(&quot;\nTotal number of annual statements: &quot;, comma(nrow(dataset)))</code></pre>
 <pre><code>## 
-## Total number of annual statements:  146045</code></pre>
+## Total number of annual statements:  146,045</code></pre>
+<pre class="r"><code>        cat(&quot;\nTotal number of fraud statements: &quot;, nrow(dataset[dataset$understatement==1,]))</code></pre>
 <pre><code>## 
 ## Total number of fraud statements:  26</code></pre>
+<pre class="r"><code>        cat(&quot;\n&quot;)</code></pre>
+<pre class="r"><code>        cat(&quot;\n\nContigency Table for statements labelled &#39;Issues&#39;&quot;)</code></pre>
 <pre><code>## 
 ## 
 ## Contigency Table for statements labelled &#39;Issues&#39;</code></pre>
+<pre class="r"><code>        round(prop.table(table(dataset$issue)),2) #what is this? what &quot;issue&quot; are we talking about?</code></pre>
 <pre><code>## 
 ##    0    1 
 ## 0.14 0.86</code></pre>
-<pre><code>##                                        missing_var missing_value_count
-## 1                                               bm                  18
-## 2                                             reoa                 591
-## 3                                             EBIT                 591
-## 4                                      soft_assets                 592
-## 5                                          dch_inv                4615
-## 6                                          dch_rec                4743
-## 7                                           dch_wc                4759
-## 8                                          ch_rsst                4851
-## 9                                           ch_fcf                5407
-## 10                                             dpi                9228
-## 11                                          ch_roa               12678
-## 12 Standard Industrial Classification - Historical               13529
-## 13                                           ch_cs               15918
-## 14                                           ch_cm               17107
-## 15                                          p_aaer              145081
-## 16                                      new_p_aaer              145081
-##    missing_value_perc
-## 1            0.01232%
-## 2            0.40467%
-## 3            0.40467%
-## 4            0.40535%
-## 5            3.15998%
-## 6            3.24763%
-## 7            3.25858%
-## 8            3.32158%
-## 9            3.70228%
-## 10           6.31860%
-## 11           8.68089%
-## 12           9.26358%
-## 13          10.89938%
-## 14          11.71351%
-## 15          99.33993%
-## 16          99.33993%</code></pre>
+<pre class="r"><code>    #check variables with missing values
+        missing_value_count &lt;- data.frame(missing_value_count= apply(dataset, 2, function(x){sum(is.na(x))})) %&gt;% 
+                                    filter(missing_value_count&gt;=1)  
+          
+        missing_value_count$missing_var &lt;- row.names(missing_value_count)
+        row.names(missing_value_count) &lt;- NULL
+        missing_value_count &lt;- missing_value_count[,c(2,1)]
+        missing_value_df &lt;-   missing_value_count %&gt;% 
+                              arrange(missing_value_count) %&gt;% #asc on number of missing values
+                              mutate(missing_value_perc= percent(missing_value_count/nrow(dataset)),
+                                     missing_value_count =comma(missing_value_count))
+        missing_value_df.new &lt;- missing_value_df %&gt;% 
+                                left_join(data_dictionary, by=c(&quot;missing_var&quot;= &quot;Description&quot;)) %&gt;% 
+                                select(c(4,1,2,3)) %&gt;% 
+                                mutate(New.CCM.Item.Name=tolower(New.CCM.Item.Name)) %&gt;% 
+                                rename(missing_var_orig_coding=New.CCM.Item.Name)
+        missing_value_df.new</code></pre>
+<pre><code>##    missing_var_orig_coding                                     missing_var
+## 1                     &lt;NA&gt;                                              bm
+## 2                     &lt;NA&gt;                                            reoa
+## 3                     &lt;NA&gt;                                            EBIT
+## 4                     &lt;NA&gt;                                     soft_assets
+## 5                     &lt;NA&gt;                                         dch_inv
+## 6                     &lt;NA&gt;                                         dch_rec
+## 7                     &lt;NA&gt;                                          dch_wc
+## 8                     &lt;NA&gt;                                         ch_rsst
+## 9                     &lt;NA&gt;                                          ch_fcf
+## 10                    &lt;NA&gt;                                             dpi
+## 11                    &lt;NA&gt;                                          ch_roa
+## 12                    sich Standard Industrial Classification - Historical
+## 13                    &lt;NA&gt;                                           ch_cs
+## 14                    &lt;NA&gt;                                           ch_cm
+## 15                    &lt;NA&gt;                                          p_aaer
+## 16                    &lt;NA&gt;                                      new_p_aaer
+##    missing_value_count missing_value_perc
+## 1                 18.0           0.01232%
+## 2                591.0           0.40467%
+## 3                591.0           0.40467%
+## 4                592.0           0.40535%
+## 5              4,615.0           3.15998%
+## 6              4,743.0           3.24763%
+## 7              4,759.0           3.25858%
+## 8              4,851.0           3.32158%
+## 9              5,407.0           3.70228%
+## 10             9,228.0           6.31860%
+## 11            12,678.0           8.68089%
+## 12            13,529.0           9.26358%
+## 13            15,918.0          10.89938%
+## 14            17,107.0          11.71351%
+## 15           145,081.0          99.33993%
+## 16           145,081.0          99.33993%</code></pre>
+<pre class="r"><code>        cat(&quot;\n\n&quot;)</code></pre>
+<pre class="r"><code>    #check if we are missing different years&#39; data
+        companies_with_missing_year &lt;- dataset %&gt;% 
+                                       select(gvkey,fyear) %&gt;% 
+                                       group_by(gvkey) %&gt;%
+                                       mutate(report_range = max(fyear)-min(fyear)+1,
+                                              count_reports= n(),
+                                              num_missing_year =report_range - count_reports,
+                                              proportion_reports_missing =num_missing_year/report_range) %&gt;% 
+                                       distinct(gvkey,report_range,count_reports,num_missing_year,proportion_reports_missing) %&gt;% 
+                                       filter(num_missing_year&gt;=1) %&gt;% #get companies that have missed annual reports
+                                       distinct(gvkey)
+          
+        num_company_with_missing_reports &lt;- length(companies_with_missing_year$gvkey)
+        cat(&quot;Number of companies with missing annual reports:&quot;, 
+            comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed</code></pre>
+<pre><code>## Number of companies with missing annual reports: 4,604</code></pre>
+<pre class="r"><code>        cat(&quot;\nTotal number of companies:&quot;, comma(length(all_companies)))       </code></pre>
+<pre><code>## 
+## Total number of companies: 18,444</code></pre>
+<pre class="r"><code>        cat(&quot;\nProportion of companies with missing annual reports:&quot;, percent(num_company_with_missing_reports/length(all_companies)))   </code></pre>
+<pre><code>## 
+## Proportion of companies with missing annual reports: 25%</code></pre>
+</div>
+<div id="split-to-training-and-test-set" class="section level2">
+<h2>Split to training and test set</h2>
+<pre class="r"><code>    dataset.new &lt;- dataset
+    dataset.new[sapply(dataset.new,is.integer)] &lt;- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)#convert all int columns to categories
+    dataset.new$p_aaer &lt;- NULL  #&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
+    dataset.new$new_p_aaer &lt;- NULL#&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
+    str(dataset.new)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    146045 obs. of  49 variables:
+##  $ fyear                                          : Factor w/ 25 levels &quot;1990&quot;,&quot;1991&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ gvkey                                          : Factor w/ 18444 levels &quot;1004&quot;,&quot;1009&quot;,..: 2 3 6 8 9 10 11 13 14 15 ...
+##  $ Standard Industrial Classification - Historical: Factor w/ 443 levels &quot;100&quot;,&quot;200&quot;,&quot;700&quot;,..: 148 263 217 232 402 91 141 163 251 442 ...
+##  $ insbnk                                         : Factor w/ 2 levels &quot;0&quot;,&quot;1&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ understatement                                 : Factor w/ 2 levels &quot;0&quot;,&quot;1&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ option                                         : Factor w/ 2 levels &quot;0&quot;,&quot;1&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ misstate                                       : Factor w/ 2 levels &quot;0&quot;,&quot;1&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Current Assets - Total                         : num  10.05 1.25 55.04 24.68 17.32 ...
+##  $ Accounts Payable - Trade                       : num  3.736 0.803 3.601 3.948 3.52 ...
+##  $ Assets - Total                                 : num  32.34 7.78 118.12 34.59 27.54 ...
+##  $ Common/Ordinary Equity - Total                 : num  6.262 0.667 44.393 7.751 -12.142 ...
+##  $ Cash and Short-Term Investments                : num  0.002 0.171 3.132 0.411 1.017 ...
+##  $ Cost of Goods Sold                             : num  30.63 1.12 107.34 31.21 32.66 ...
+##  $ Common Shares Outstanding                      : num  2.53 3.56 3.88 4.75 6.74 ...
+##  $ Debt in Current Liabilities - Total            : num  3.283 0.021 6.446 8.791 32.206 ...
+##  $ Long-Term Debt/Issuance                        : num  32.853 2.017 6.5 0.587 0 ...
+##  $ Long-Term Debt - Total                         : num  17.691 5.871 37.603 8.906 0.266 ...
+##  $ Depreciation and Amortization                  : num  1.97 0.7 6.27 1.32 2.71 ...
+##  $ Income Before Extraordinary Items              : num  1.431 -1.869 1.722 0.422 -23.577 ...
+##  $ Inventories - Total                            : num  2.355 0.663 4.292 15.463 8.971 ...
+##  $ Investment and Advances/Other                  : num  0 0.132 12.989 0 0 ...
+##  $ Short-Term Investments - Total                 : num  0 0 2.91 0 0 ...
+##  $ Current Liabilities - Total                    : num  8.38 1.25 32.62 16.21 39.42 ...
+##  $ Liabilities - Total                            : num  26.07 7.12 73.73 25.55 39.68 ...
+##  $ Net Income (Loss)                              : num  2.135 -1.869 2.574 0.422 -22.812 ...
+##  $ &quot;Property, Plant and Equipment - Total (Gross)&quot;: num  31.77 7.33 78.33 11.14 5.78 ...
+##  $ Preferred/Preference Stock (Capital) - Total   : num  0 0 0 1.29 0 ...
+##  $ Retained Earnings                              : num  5.42 -3.34 46.63 3.28 -25.95 ...
+##  $ Receivables/Total                              : num  6.89 0.29 47.37 8.52 6.35 ...
+##  $ Sales/Turnover (Net)                           : num  40.52 3.63 144.26 48.29 33.54 ...
+##  $ Sale of Common and Preferred Stock             : num  0 0.006 0 0 0 0 0 0.082 0 0 ...
+##  $ Income Taxes Payable                           : num  0 0 0 0.448 0 ...
+##  $ Income Taxes - Total                           : num  0.769 0 0.986 0.365 0 ...
+##  $ Interest and Related Expense - Total           : num  2.33 0.64 3.96 2.27 3.51 ...
+##  $ prcc_f                                         : num  6 1.19 5.12 1.56 1.12 ...
+##  $ dch_wc                                         : num  0.0696 -0.0656 0.0928 0.0141 -0.5405 ...
+##  $ ch_rsst                                        : num  0.046 -0.2409 0.0201 0.0351 -0.5753 ...
+##  $ dch_rec                                        : num  0.04193 -0.00625 0.00216 0.03558 -0.10215 ...
+##  $ dch_inv                                        : num  0.03303 -0.02668 0.00275 0.00833 -0.22202 ...
+##  $ soft_assets                                    : num  0.312 0.316 0.605 0.793 0.869 ...
+##  $ ch_cs                                          : num  0.09508 0.18883 0.09755 -0.00573 -0.23154 ...
+##  $ ch_cm                                          : num  0.0826 -0.2114 -0.1058 -0.2497 -1.6749 ...
+##  $ ch_roa                                         : num  -0.0198 -0.1178 0.0912 0.0175 -0.4667 ...
+##  $ issue                                          : Factor w/ 2 levels &quot;0&quot;,&quot;1&quot;: 2 2 2 2 1 2 2 2 2 2 ...
+##  $ bm                                             : num  0.413 0.158 2.231 1.044 -1.603 ...
+##  $ dpi                                            : num  0.874 0.745 1.015 1.026 0.598 ...
+##  $ reoa                                           : num  0.1676 -0.429 0.3948 0.0948 -0.9424 ...
+##  $ EBIT                                           : num  0.162 -0.1579 0.0637 0.0883 -0.7008 ...
+##  $ ch_fcf                                         : num  -0.0421 0.1002 0.0663 -0.0174 0.1303 ...</code></pre>
+</div>
+<div id="rnn" class="section level2">
+<h2>RNN</h2>
+<pre class="r"><code>    # library(keras)
+    # library(tensorflow)
+    # use_condaenv(&quot;r-reticulate&quot;, required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+    # 
+    # max_features &lt;- 10000
+    # maxlen &lt;- 500
+    # batch_size &lt;- 32
+    # cat(&quot;Loading data...\n&quot;)
+    # imdb &lt;- dataset_imdb(num_words = max_features)
+    # c(c(input_train, y_train), c(input_test, y_test)) %&lt;-% imdb
+    # cat(length(input_train), &quot;train sequences\n&quot;)
+    # cat(length(input_test), &quot;test sequences&quot;)
+    # cat(&quot;Pad sequences (samples x time)\n&quot;)
+    # input_train &lt;- pad_sequences(input_train, maxlen = maxlen)
+    # input_test &lt;- pad_sequences(input_test, maxlen = maxlen)
+    # cat(&quot;input_train shape:&quot;, dim(input_train), &quot;\n&quot;)
+    # cat(&quot;input_test shape:&quot;, dim(input_test), &quot;\n&quot;)</code></pre>
 </div>
 
 
