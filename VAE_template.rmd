@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
     library(dplyr)
     library(stringr)
     library(scales)
+    library(zeallot)
 ```
 
 ## Load data
@@ -123,12 +124,52 @@ colnames(dataset)
 ## Split to training and test set 
 ```{r train_test, echo=TRUE}
 
-    dataset.new <- dataset
-    dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)#convert all int columns to categories
-    dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
-    dataset.new$new_p_aaer <- NULL#"Accounting and Auditing Enforcement Releases" usually come after allegations
-    str(dataset.new)
-
+    # convert the columns to appropriate types 
+            dataset.new <- dataset
+            dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+            dataset.new$new_p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+            c(num.of.rows, num.of.cols) %<-% dim(dataset.new) #get dimensions of the data frame
+        
+    # for each company, get the earliest and latest year for which a record was available. 
+        # for a company, if records are missing in-between years, code missing records with "1111"
+ 
+                        min_year <- min(dataset.new$fyear)
+                        max_year <- max(dataset.new$fyear)
+                        num_years <- max_year-min_year +1
+                        ref_years_df <- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
+                                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
+                        
+                        dataset.new.mod <-ref_years_df %>% 
+                                              left_join(dataset.new,by=c("gvkey"="gvkey","fyear"= "fyear")) %>% 
+                                              group_by(gvkey) %>% 
+                                              arrange(gvkey,fyear)
+                        
+                        min_max_lookup <- dataset.new.mod %>% 
+                                              filter(!is.na(understatement)) %>% 
+                                              group_by(gvkey) %>% 
+                                              mutate(max_year=max(fyear),
+                                                     min_year=min(fyear)) %>% 
+                                              select(gvkey,max_year,min_year) %>% 
+                                              distinct(gvkey,max_year,min_year)
+                        
+                       dataset.new.mod<-  dataset.new.mod %>% 
+                                              left_join(min_max_lookup,by=c("gvkey"="gvkey")) %>% 
+                                              mutate(ind_missing = case_when(fyear <min_year~"pre", 
+                                                                             fyear >max_year~ "post",
+                                                                             fyear>min_year&fyear<max_year~"during",
+                                                                             TRUE~"N/A"))
+                       dataset.new.mod <- as.data.frame(dataset.new.mod)
+                  
+                  
+                   #define "pre", "post" and "during" NA's 
+                       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -999999999999
+                       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- -666666666666
+                       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- -333333333333
+                   
+    # split into a training set and a test set
+        
+    # one-hot encoding/convert to the right data type
+        #dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)
 ```
 
 ## RNN 
