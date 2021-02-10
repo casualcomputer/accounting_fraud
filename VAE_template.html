@@ -680,7 +680,7 @@ summary {
           
         num_company_with_missing_reports &lt;- length(companies_with_missing_year$gvkey)
         cat(&quot;Number of companies with missing annual reports:&quot;, 
-            comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed</code></pre>
+        comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed</code></pre>
 <pre><code>## Number of companies with missing annual reports: 4,604</code></pre>
 <pre class="r"><code>        cat(&quot;\nTotal number of companies:&quot;, comma(length(all_companies)))       </code></pre>
 <pre><code>## 
@@ -689,110 +689,99 @@ summary {
 <pre><code>## 
 ## Proportion of companies with missing annual reports: 25%</code></pre>
 </div>
-<div id="split-to-training-and-test-set" class="section level2">
-<h2>Split to training and test set</h2>
-<pre class="r"><code>    # convert the columns to appropriate types 
-            dataset.new &lt;- dataset
-            dataset.new$p_aaer &lt;- NULL  #&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
-            dataset.new$new_p_aaer &lt;- NULL  #&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
-            c(num.of.rows, num.of.cols) %&lt;-% dim(dataset.new) #get dimensions of the data frame
+<div id="data-preparation" class="section level2">
+<h2>Data Preparation</h2>
+<pre class="r"><code># convert the columns to appropriate types 
+        dataset.new &lt;- dataset
+        dataset.new$p_aaer &lt;- NULL  #&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
+        dataset.new$new_p_aaer &lt;- NULL  #&quot;Accounting and Auditing Enforcement Releases&quot; usually come after allegations
+        c(num.of.rows, num.of.cols) %&lt;-% dim(dataset.new) #get dimensions of the data frame
+    
         
-    # for each company, get the earliest and latest year for which a record was available. 
-        # for a company, if records are missing in-between years, code missing records with &quot;1111&quot;
- 
-                        min_year &lt;- min(dataset.new$fyear)
-                        max_year &lt;- max(dataset.new$fyear)
-                        num_years &lt;- max_year-min_year +1
-                        ref_years_df &lt;- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
-                                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
-                        
-                        dataset.new.mod &lt;-ref_years_df %&gt;% 
-                                              left_join(dataset.new,by=c(&quot;gvkey&quot;=&quot;gvkey&quot;,&quot;fyear&quot;= &quot;fyear&quot;)) %&gt;% 
-                                              group_by(gvkey) %&gt;% 
-                                              arrange(gvkey,fyear)
-                        
-                        min_max_lookup &lt;- dataset.new.mod %&gt;% 
-                                              filter(!is.na(understatement)) %&gt;% 
-                                              group_by(gvkey) %&gt;% 
-                                              mutate(max_year=max(fyear),
-                                                     min_year=min(fyear)) %&gt;% 
-                                              select(gvkey,max_year,min_year) %&gt;% 
-                                              distinct(gvkey,max_year,min_year)
-                        
-                       dataset.new.mod&lt;-  dataset.new.mod %&gt;% 
-                                              left_join(min_max_lookup,by=c(&quot;gvkey&quot;=&quot;gvkey&quot;)) %&gt;% 
-                                              mutate(ind_missing = case_when(fyear &lt;min_year~&quot;pre&quot;, 
-                                                                             fyear &gt;max_year~ &quot;post&quot;,
-                                                                             fyear&gt;min_year&amp;fyear&lt;max_year~&quot;during&quot;,
-                                                                             TRUE~&quot;N/A&quot;))
-                       dataset.new.mod &lt;- as.data.frame(dataset.new.mod)
-                  
-                  
-                   #define &quot;pre&quot;, &quot;post&quot; and &quot;during&quot; NA&#39;s 
-                       dataset.new.mod[dataset.new.mod$ind_missing==&quot;pre&quot;,3:49] &lt;- -100000000000
-                       dataset.new.mod[dataset.new.mod$ind_missing==&quot;post&quot;,3:49] &lt;- 100000000000 #-666666666666
-                       dataset.new.mod[dataset.new.mod$ind_missing==&quot;during&quot;,3:49] &lt;- 100000000000
+# for each company, get the earliest and latest year for which a record was available. 
+        min_year &lt;- min(dataset.new$fyear)
+        max_year &lt;- max(dataset.new$fyear)
+        num_years &lt;- max_year-min_year +1
+        ref_years_df &lt;- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
+                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
+        
+        dataset.new.mod &lt;-ref_years_df %&gt;% 
+                              left_join(dataset.new,by=c(&quot;gvkey&quot;=&quot;gvkey&quot;,&quot;fyear&quot;= &quot;fyear&quot;)) %&gt;% 
+                              group_by(gvkey) %&gt;% 
+                              arrange(gvkey,fyear)
+        
+        min_max_lookup &lt;- dataset.new.mod %&gt;% 
+                              filter(!is.na(understatement)) %&gt;% 
+                              group_by(gvkey) %&gt;% 
+                              mutate(max_year=max(fyear),
+                                     min_year=min(fyear)) %&gt;% 
+                              select(gvkey,max_year,min_year) %&gt;% 
+                              distinct(gvkey,max_year,min_year)
+        
+       dataset.new.mod&lt;-  dataset.new.mod %&gt;% 
+                              left_join(min_max_lookup,by=c(&quot;gvkey&quot;=&quot;gvkey&quot;)) %&gt;% 
+                              mutate(ind_missing = case_when(fyear &lt;min_year~&quot;pre&quot;, 
+                                                             fyear &gt;max_year~ &quot;post&quot;,
+                                                             fyear&gt;min_year&amp;fyear&lt;max_year~&quot;during&quot;,
+                                                             TRUE~&quot;N/A&quot;))
+       dataset.new.mod &lt;- as.data.frame(dataset.new.mod)
+              
 
-                    str(dataset.new.mod)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    461100 obs. of  52 variables:
-##  $ gvkey                                          : int  1004 1004 1004 1004 1004 1004 1004 1004 1004 1004 ...
-##  $ fyear                                          : int  1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 ...
-##  $ Standard Industrial Classification - Historical: num  -1.00e+11 5.08e+03 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ insbnk                                         : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ understatement                                 : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ option                                         : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ misstate                                       : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ Current Assets - Total                         : num  -1.0e+11 2.9e+02 1.0e+11 1.0e+11 1.0e+11 ...
-##  $ Accounts Payable - Trade                       : num  -1.00e+11 4.34e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Assets - Total                                 : num  -1.00e+11 3.95e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Common/Ordinary Equity - Total                 : num  -1.00e+11 1.97e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Cash and Short-Term Investments                : num  -1.0e+11 4.2 1.0e+11 1.0e+11 1.0e+11 ...
-##  $ Cost of Goods Sold                             : num  -1.00e+11 3.31e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Common Shares Outstanding                      : num  -1.00e+11 1.59e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Debt in Current Liabilities - Total            : num  -1.0e+11 2.5e+01 1.0e+11 1.0e+11 1.0e+11 ...
-##  $ Long-Term Debt/Issuance                        : num  -1.00e+11 6.87 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Long-Term Debt - Total                         : num  -1.00e+11 6.73e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Depreciation and Amortization                  : num  -1.00e+11 8.16 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Income Before Extraordinary Items              : num  -1e+11 1e+01 1e+11 1e+11 1e+11 ...
-##  $ Inventories - Total                            : num  -1.00e+11 1.73e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Investment and Advances/Other                  : num  -1.00e+11 3.28e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Short-Term Investments - Total                 : num  -1.00e+11 1.95 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Current Liabilities - Total                    : num  -1.00e+11 9.23e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Liabilities - Total                            : num  -1.00e+11 1.99e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Net Income (Loss)                              : num  -1e+11 1e+01 1e+11 1e+11 1e+11 ...
-##  $ &quot;Property, Plant and Equipment - Total (Gross)&quot;: num  -1.00e+11 1.19e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Preferred/Preference Stock (Capital) - Total   : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ Retained Earnings                              : num  -1.00e+11 1.03e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Receivables/Total                              : num  -1.00e+11 8.98e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Sales/Turnover (Net)                           : num  -1.00e+11 4.23e+02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Sale of Common and Preferred Stock             : num  -1e+11 0e+00 1e+11 1e+11 1e+11 ...
-##  $ Income Taxes Payable                           : num  -1.00e+11 4.98 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ Income Taxes - Total                           : num  -1.0e+11 3.6 1.0e+11 1.0e+11 1.0e+11 ...
-##  $ Interest and Related Expense - Total           : num  -1.00e+11 8.36 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ prcc_f                                         : num  -1.00e+11 1.29e+01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ dch_wc                                         : num  -1.00e+11 3.84e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ ch_rsst                                        : num  -1.00e+11 8.32e-03 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ dch_rec                                        : num  -1.00e+11 -3.76e-03 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ dch_inv                                        : num  -1.00e+11 4.45e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ soft_assets                                    : num  -1.00e+11 8.37e-01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ ch_cs                                          : num  -1.00e+11 -9.55e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ ch_cm                                          : num  -1.00e+11 1.56e-01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ ch_roa                                         : num  -1.00e+11 -1.27e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ issue                                          : num  -1e+11 1e+00 1e+11 1e+11 1e+11 ...
-##  $ bm                                             : num  -1.00e+11 9.61e-01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ dpi                                            : num  -1.00e+11 9.68e-01 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ reoa                                           : num  -1.0e+11 2.6e-01 1.0e+11 1.0e+11 1.0e+11 ...
-##  $ EBIT                                           : num  -1.00e+11 5.56e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ ch_fcf                                         : num  -1.00e+11 -2.06e-02 1.00e+11 1.00e+11 1.00e+11 ...
-##  $ max_year                                       : int  2014 2014 2014 2014 2014 2014 2014 2014 2014 2014 ...
-##  $ min_year                                       : int  1991 1991 1991 1991 1991 1991 1991 1991 1991 1991 ...
-##  $ ind_missing                                    : chr  &quot;pre&quot; &quot;N/A&quot; &quot;during&quot; &quot;during&quot; ...</code></pre>
-<pre class="r"><code>                    fraud.df &lt;- dataset.new.mod %&gt;% filter(gvkey %in% fraud_companies)
-                    View(fraud.df)</code></pre>
+#define &quot;pre&quot;, &quot;post&quot; and &quot;during&quot; NA&#39;s 
+       dataset.new.mod[dataset.new.mod$ind_missing==&quot;pre&quot;,3:49] &lt;- -100000000000 #before first file
+       dataset.new.mod[dataset.new.mod$ind_missing==&quot;post&quot;,3:49] &lt;- 100000000000 #between first file and last file 
+       dataset.new.mod[dataset.new.mod$ind_missing==&quot;during&quot;,3:49] &lt;- 100000000000 #after last file 
+       
+       cleaned_data &lt;- dataset.new.mod
+       cleaned_data$gvkey &lt;- NULL 
+       cleaned_data$max_year &lt;- NULL      
+       cleaned_data$min_year &lt;- NULL 
+       
+       #str(dataset.new.mod)
+       #summary(dataset.new.mod)
+       
+#fraud data (how are splits represented)                    
+        fraud.df &lt;- dataset.new.mod %&gt;% filter(gvkey %in% fraud_companies)
+        #View(fraud.df)</code></pre>
+</div>
+<div id="clustering" class="section level2">
+<h2>Clustering</h2>
+<pre class="r"><code>filing_compliance &lt;- dataset.new.mod %&gt;% 
+                            mutate(duration=max_year-min_year+1,
+                                   has.filed= case_when(abs(understatement)&lt;1~1,
+                                                        TRUE~0)) %&gt;% 
+                            select(gvkey,has.filed,duration) %&gt;% 
+                            group_by(gvkey) %&gt;%
+                            mutate(filing_count=sum(has.filed),
+                                   duration=max(duration),
+                                   filing_rate=duration/filing_count)</code></pre>
 </div>
 <div id="rnn" class="section level2">
 <h2>RNN</h2>
 <pre class="r"><code>    # library(keras)
+    # library(tensorflow)
+    # use_condaenv(&quot;r-reticulate&quot;, required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+    # reticulate::py_config()
+    # model &lt;- keras_model_sequential() %&gt;%
+    #              layer_embedding(input_dim = max_features, output_dim = 32) %&gt;%
+    #              layer_simple_rnn(units = 32) %&gt;%
+    #              layer_dense(units = 1, activation = &quot;sigmoid&quot;)
+    # 
+    # model %&gt;% compile(
+    #    optimizer = &quot;rmsprop&quot;,
+    #    loss = &quot;binary_crossentropy&quot;,
+    #    metrics = c(&quot;acc&quot;)
+    # )
+    # 
+    # history &lt;- model %&gt;% fit(
+    #    input_train, y_train,
+    #    epochs = 10,
+    #    batch_size = 128,
+    #    validation_split = 0.2
+    # )
+    # 
+    # plot(history)
+        # library(keras)
     # library(tensorflow)
     # use_condaenv(&quot;r-reticulate&quot;, required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
     # 

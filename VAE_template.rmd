@@ -115,66 +115,121 @@ knitr::opts_chunk$set(echo = TRUE)
           
         num_company_with_missing_reports <- length(companies_with_missing_year$gvkey)
         cat("Number of companies with missing annual reports:", 
-            comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed
+        comma(num_company_with_missing_reports)) #I wonder on which exchange most of these companies are listed
         cat("\nTotal number of companies:", comma(length(all_companies)))       
         cat("\nProportion of companies with missing annual reports:", percent(num_company_with_missing_reports/length(all_companies)))   
 ```
 
 
-## Split to training and test set 
+## Data Preparation
 ```{r train_test, echo=TRUE}
-    # convert the columns to appropriate types 
-            dataset.new <- dataset
-            dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
-            dataset.new$new_p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
-            c(num.of.rows, num.of.cols) %<-% dim(dataset.new) #get dimensions of the data frame
+# convert the columns to appropriate types 
+        dataset.new <- dataset
+        dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+        dataset.new$new_p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+        c(num.of.rows, num.of.cols) %<-% dim(dataset.new) #get dimensions of the data frame
+    
         
-    # for each company, get the earliest and latest year for which a record was available. 
-        # for a company, if records are missing in-between years, code missing records with "1111"
- 
-                        min_year <- min(dataset.new$fyear)
-                        max_year <- max(dataset.new$fyear)
-                        num_years <- max_year-min_year +1
-                        ref_years_df <- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
-                                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
-                        
-                        dataset.new.mod <-ref_years_df %>% 
-                                              left_join(dataset.new,by=c("gvkey"="gvkey","fyear"= "fyear")) %>% 
-                                              group_by(gvkey) %>% 
-                                              arrange(gvkey,fyear)
-                        
-                        min_max_lookup <- dataset.new.mod %>% 
-                                              filter(!is.na(understatement)) %>% 
-                                              group_by(gvkey) %>% 
-                                              mutate(max_year=max(fyear),
-                                                     min_year=min(fyear)) %>% 
-                                              select(gvkey,max_year,min_year) %>% 
-                                              distinct(gvkey,max_year,min_year)
-                        
-                       dataset.new.mod<-  dataset.new.mod %>% 
-                                              left_join(min_max_lookup,by=c("gvkey"="gvkey")) %>% 
-                                              mutate(ind_missing = case_when(fyear <min_year~"pre", 
-                                                                             fyear >max_year~ "post",
-                                                                             fyear>min_year&fyear<max_year~"during",
-                                                                             TRUE~"N/A"))
-                       dataset.new.mod <- as.data.frame(dataset.new.mod)
-                  
-                  
-                   #define "pre", "post" and "during" NA's 
-                       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -100000000000
-                       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- 100000000000 #-666666666666
-                       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- 100000000000
+# for each company, get the earliest and latest year for which a record was available. 
+        min_year <- min(dataset.new$fyear)
+        max_year <- max(dataset.new$fyear)
+        num_years <- max_year-min_year +1
+        ref_years_df <- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
+                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
+        
+        dataset.new.mod <-ref_years_df %>% 
+                              left_join(dataset.new,by=c("gvkey"="gvkey","fyear"= "fyear")) %>% 
+                              group_by(gvkey) %>% 
+                              arrange(gvkey,fyear)
+        
+        min_max_lookup <- dataset.new.mod %>% 
+                              filter(!is.na(understatement)) %>% 
+                              group_by(gvkey) %>% 
+                              mutate(max_year=max(fyear),
+                                     min_year=min(fyear)) %>% 
+                              select(gvkey,max_year,min_year) %>% 
+                              distinct(gvkey,max_year,min_year)
+        
+       dataset.new.mod<-  dataset.new.mod %>% 
+                              left_join(min_max_lookup,by=c("gvkey"="gvkey")) %>% 
+                              mutate(ind_missing = case_when(fyear <min_year~"pre", 
+                                                             fyear >max_year~ "post",
+                                                             fyear>min_year&fyear<max_year~"during",
+                                                             TRUE~"N/A"))
+       dataset.new.mod <- as.data.frame(dataset.new.mod)
+              
 
-                    str(dataset.new.mod)
-                    
-                    fraud.df <- dataset.new.mod %>% filter(gvkey %in% fraud_companies)
-                    View(fraud.df)
+#define "pre", "post" and "during" NA's 
+       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -100000000000 #before first file
+       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- 100000000000 #between first file and last file 
+       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- 100000000000 #after last file 
+       
+       cleaned_data <- dataset.new.mod
+       cleaned_data$gvkey <- NULL 
+       cleaned_data$max_year <- NULL      
+       cleaned_data$min_year <- NULL 
+       
+       #str(dataset.new.mod)
+       #summary(dataset.new.mod)
+       
+#fraud data (how are splits represented)                    
+        fraud.df <- dataset.new.mod %>% filter(gvkey %in% fraud_companies)
+        #View(fraud.df)
 ```
+## Clustering 
+```{r clustering, echo=TRUE, warning=FALSE}
+filing_compliance <- dataset.new.mod %>% 
+                            mutate(duration=max_year-min_year+1,
+                                   has.filed= case_when(abs(understatement)<1~1,
+                                                        TRUE~0)) %>% 
+                            select(gvkey,has.filed,duration) %>% 
+                            group_by(gvkey) %>%
+                            mutate(filing_count=sum(has.filed),
+                                   duration=max(duration)) %>% 
+                            select(-has.filed)
+
+filing_compliance <- filing_compliance %>% 
+                          mutate(filing_rate =filing_count/duration ) %>% 
+                          arrange(filing_rate) %>% 
+                          distinct_all()
+
+str(filing_compliance)
+
+par(mfrow=c(2,1))
+hist(filing_compliance[filing_compliance$gvkey %in% fraud_companies,]$filing_rate,
+     main="filing rate distribution: fraud companies",xlab ="filing rate")
+hist(filing_compliance[!filing_compliance$gvkey %in% fraud_companies,]$filing_rate,
+     main="filing rate distribution: non-fraud companies",xlab ="filing rate")
+```
+
 
 ## RNN 
 ```{r RNN, echo=TRUE}
-    
+
     # library(keras)
+    # library(tensorflow)
+    # use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+    # reticulate::py_config()
+    # model <- keras_model_sequential() %>%
+    #              layer_embedding(input_dim = max_features, output_dim = 32) %>%
+    #              layer_simple_rnn(units = 32) %>%
+    #              layer_dense(units = 1, activation = "sigmoid")
+    # 
+    # model %>% compile(
+    #    optimizer = "rmsprop",
+    #    loss = "binary_crossentropy",
+    #    metrics = c("acc")
+    # )
+    # 
+    # history <- model %>% fit(
+    #    input_train, y_train,
+    #    epochs = 10,
+    #    batch_size = 128,
+    #    validation_split = 0.2
+    # )
+    # 
+    # plot(history)
+        # library(keras)
     # library(tensorflow)
     # use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
     # 
