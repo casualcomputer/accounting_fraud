@@ -52,7 +52,7 @@ knitr::opts_chunk$set(echo = TRUE)
           names(dataset)[var_in_dict[i,3]] <- var_in_dict[i,2]
         }
         names(dataset) <- gsub("\\\\","",names(dataset))
-colnames(dataset)
+        colnames(dataset)
 ```
 
 ## Produce some basic summaries
@@ -161,18 +161,41 @@ colnames(dataset)
                   
                   
                    #define "pre", "post" and "during" NA's 
-                       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -999999999999
-                       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- -666666666666
-                       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- -333333333333
-                   
-    # split into a training set and a test set
-        
-    # one-hot encoding/convert to the right data type
-        #dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)
+                       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -100000000000
+                       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- 100000000000 #-666666666666
+                       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- 100000000000
+
+                    str(dataset.new.mod)
+                    
+                    fraud.df <- dataset.new.mod %>% filter(gvkey %in% fraud_companies)
+                    View(fraud.df)
 ```
 
 ## RNN 
 ```{r RNN, echo=TRUE}
+    
+    # library(keras)
+    # library(tensorflow)
+    # use_condaenv("r-reticulate", required = TRUE) #https://community.rstudio.com/t/error-installation-of-tensorflow-not-found-in-rstudio/67200/2
+    # 
+    # max_features <- 10000
+    # maxlen <- 500
+    # batch_size <- 32
+    # cat("Loading data...\n")
+    # imdb <- dataset_imdb(num_words = max_features)
+    # c(c(input_train, y_train), c(input_test, y_test)) %<-% imdb
+    # cat(length(input_train), "train sequences\n")
+    # cat(length(input_test), "test sequences")
+    # cat("Pad sequences (samples x time)\n")
+    # input_train <- pad_sequences(input_train, maxlen = maxlen)
+    # input_test <- pad_sequences(input_test, maxlen = maxlen)
+    # cat("input_train shape:", dim(input_train), "\n")
+    # cat("input_test shape:", dim(input_test), "\n")
+```
+
+
+## Autoencoder 
+```{r autoencoder, echo=TRUE}
     
     # library(keras)
     # library(tensorflow)
