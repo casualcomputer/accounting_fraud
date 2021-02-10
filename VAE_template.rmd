@@ -18,7 +18,6 @@ knitr::opts_chunk$set(echo = TRUE)
     library(dplyr)
     library(stringr)
     library(scales)
-    library(zeallot)
 ```
 
 ## Load data
@@ -121,55 +120,48 @@ colnames(dataset)
 ```
 
 
-## Split to training and test set 
+## Data Cleaning
+
 ```{r train_test, echo=TRUE}
 
     # convert the columns to appropriate types 
-            dataset.new <- dataset
-            dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
-            dataset.new$new_p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
-            c(num.of.rows, num.of.cols) %<-% dim(dataset.new) #get dimensions of the data frame
+        dataset.new <- dataset
+        dataset.new$p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+        dataset.new$new_p_aaer <- NULL  #"Accounting and Auditing Enforcement Releases" usually come after allegations
+        c(num.of.rows, num.of.cols) %<-% dim(dataset.new) #get dimensions of the data frame
+        
+
         
     # for each company, get the earliest and latest year for which a record was available. 
         # for a company, if records are missing in-between years, code missing records with "1111"
- 
-                        min_year <- min(dataset.new$fyear)
-                        max_year <- max(dataset.new$fyear)
-                        num_years <- max_year-min_year +1
-                        ref_years_df <- data.frame(gvkey= rep(unique(dataset.new$gvkey),each=num_years),
-                                                   fyear = rep(min_year:max_year, times=length(unique(dataset.new$gvkey))))
-                        
-                        dataset.new.mod <-ref_years_df %>% 
-                                              left_join(dataset.new,by=c("gvkey"="gvkey","fyear"= "fyear")) %>% 
-                                              group_by(gvkey) %>% 
-                                              arrange(gvkey,fyear)
-                        
-                        min_max_lookup <- dataset.new.mod %>% 
-                                              filter(!is.na(understatement)) %>% 
-                                              group_by(gvkey) %>% 
-                                              mutate(max_year=max(fyear),
-                                                     min_year=min(fyear)) %>% 
-                                              select(gvkey,max_year,min_year) %>% 
-                                              distinct(gvkey,max_year,min_year)
-                        
-                       dataset.new.mod<-  dataset.new.mod %>% 
-                                              left_join(min_max_lookup,by=c("gvkey"="gvkey")) %>% 
-                                              mutate(ind_missing = case_when(fyear <min_year~"pre", 
-                                                                             fyear >max_year~ "post",
-                                                                             fyear>min_year&fyear<max_year~"during",
-                                                                             TRUE~"N/A"))
-                       dataset.new.mod <- as.data.frame(dataset.new.mod)
+        
+            # helper function: given a gvkey and a year, output a row
+              append_missing_record <- function(fyear, gvkey,new_coding, dataset,rowNames_dataset=names(dataset)){ #note that new_coding has to be a text. handle exceptions..
+                  output_row <- data.frame(matrix(new_coding,nrow=1,ncol=num.of.cols))
+                  names(output_row) <- rowNames_dataset
+                  dataset <- rbind(dataset,output_row)
+              }
+        
+            # fill rows for missed filings
+              gvkey_with_missing_val <- c(companies_with_missing_year$gvkey)
+              for (company in gvkey_with_missing_val){
+                  cat("processing gvkey:")
+                  company_data <- dataset.new[dataset.new$gvkey==company,]
+                  available_years <- company_data$fyear
+                  min_fyear <- min(available_years)
+                  max_fyear <- max(available_years)
+                  missing_years <- setdiff(min_fyear:max_fyear, available_years)
+                  for (year in missing_years){
+                      append_missing_record(fyear=year,gvkey=company,new_coding="1111",dataset=dataset.new)
+                  }
+              }
+    
+              # fill in records before the first filings
                   
-                  
-                   #define "pre", "post" and "during" NA's 
-                       dataset.new.mod[dataset.new.mod$ind_missing=="pre",3:49] <- -999999999999
-                       dataset.new.mod[dataset.new.mod$ind_missing=="post",3:49] <- -666666666666
-                       dataset.new.mod[dataset.new.mod$ind_missing=="during",3:49] <- -333333333333
-                   
     # split into a training set and a test set
         
     # one-hot encoding/convert to the right data type
-        #dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)
+        dataset.new[sapply(dataset.new,is.integer)] <- lapply(dataset.new[sapply(dataset.new,is.integer)],as.factor)
 ```
 
 ## RNN 
