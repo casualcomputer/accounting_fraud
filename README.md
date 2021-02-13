@@ -57,4 +57,6 @@ This repository contains the data and code that was used in our paper published 
 3. how the original paper handles time dependencies 
 
 # Work
-- Week Feb 14: Solve that missing year thing and use Baseline RNN to get embeddings for clustering
+- Represent data into time series and use autoencoder
+- How to deal with the missing values in the time series
+- Solve that missing year thing and use Baseline RNN to get embeddings for clustering
