@@ -60,3 +60,6 @@ This repository contains the data and code that was used in our paper published 
 - Represent data into time series and use autoencoder
 - How to deal with the missing values in the time series
 - Solve that missing year thing and use Baseline RNN to get embeddings for clustering
+
+# Questions
+- The reason why we should normalize time series data before autoencoders
