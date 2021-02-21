@@ -63,6 +63,7 @@ This repository contains the data and code that was used in our paper published 
 - Solve that missing year thing and use Baseline RNN to get embeddings for clustering
 - ## Handling missing time steps
 [How to Handle Missing Timesteps in Sequence Prediction Problems with Python - MachineLearningMastery](https://machinelearningmastery.com/handle-missing-timesteps-sequence-prediction-problems-python/)
+1. Replace missing data with a placeholder such as `-1`
 
 # Questions
 - The reason why we should normalize time series data before autoencoders
