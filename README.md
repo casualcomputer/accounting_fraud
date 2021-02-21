@@ -61,9 +61,11 @@ This repository contains the data and code that was used in our paper published 
   - go over convolutional autoencoder for time series
 - How to deal with the missing values in the time series
 - Solve that missing year thing and use Baseline RNN to get embeddings for clustering
-- ## Handling missing time steps
+## Handling missing time steps
 [How to Handle Missing Timesteps in Sequence Prediction Problems with Python - MachineLearningMastery](https://machinelearningmastery.com/handle-missing-timesteps-sequence-prediction-problems-python/)
 1. Replace missing data with a placeholder such as `-1`
-
+2. Learn the Missing value
+The problem can be modeled as-is and we can encourage the model to learn that a specific value means “missing.” 
+3. Mask the missing value by using Masking Layer as the first layer
 # Questions
 - The reason why we should normalize time series data before autoencoders
