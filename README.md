@@ -67,5 +67,6 @@ This repository contains the data and code that was used in our paper published 
 2. Learn the Missing value
 The problem can be modeled as-is and we can encourage the model to learn that a specific value means “missing.” 
 3. Mask the missing value by using Masking Layer as the first layer
+4. [Autoencoder handles missing values](https://curiousily.com/posts/data-imputation-using-autoencoders/) 
 # Questions
 - The reason why we should normalize time series data before autoencoders
