@@ -68,5 +68,9 @@ This repository contains the data and code that was used in our paper published 
 The problem can be modeled as-is and we can encourage the model to learn that a specific value means “missing.” 
 3. Mask the missing value by using Masking Layer as the first layer
 4. [Autoencoder handles missing values](https://curiousily.com/posts/data-imputation-using-autoencoders/) 
+
+### What we will do for missing time steps
+(1) method 1: create a set of years column to indicate which year is missing for a company + use 0 to replace null for the numerical values of an accounting variable 
+
 # Questions
 - The reason why we should normalize time series data before autoencoders
