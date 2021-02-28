@@ -75,3 +75,4 @@ The problem can be modeled as-is and we can encourage the model to learn that a 
 # Questions
 - The reason why we should normalize time series data before autoencoders
 - Do we need an activation layer in autoencoder?
+- WhaT accuracy metric to use for time series autoencoder 
