@@ -56,6 +56,10 @@ This repository contains the data and code that was used in our paper published 
 2. feed multiple companies in RNN
 3. how the original paper handles time dependencies 
 
+# Deliverables Schedules
+
+
+
 # Work
 - Represent data into time series and use autoencoder
   - go over convolutional autoencoder for time series
