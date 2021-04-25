@@ -57,7 +57,7 @@ This repository contains the data and code that was used in our paper published 
 3. how the original paper handles time dependencies 
 
 # Deliverables Schedules
-1. getting the indicator table ready in Python code saved in rnn.ipynb file (Apr 25, 2021)
+1. getting the indicator table ready in Python code saved in rnn2.ipynb file (Apr 25, 2021)
 
 
 # Work
